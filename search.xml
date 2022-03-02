@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Blog</title>
+    <url>/fst-blog/</url>
+    <content><![CDATA[<p>Nice to see you,HEXO.</p>
+]]></content>
+      <tags>
+        <tag>blog</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>OMV-docker容器部署</title>
+    <url>/omv-docker/</url>
+    <content><![CDATA[<h2 id="Jellyfin-docker安装">Jellyfin-docker安装</h2>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker pull jellyfin/jellyfin:10.7.6-amd64</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker run -d \</span><br><span class="line"> --name jellyfin10.7.6 \</span><br><span class="line"> --network host \</span><br><span class="line"> -e PUID=1000 \</span><br><span class="line"> -e PGID=100 \</span><br><span class="line"> --volume /yourpath/config:/config \</span><br><span class="line"> --volume /yourpath/cache:/cache \</span><br><span class="line"> --mount type=bind,source=/yourpath/movies,target=/movies \</span><br><span class="line"> --mount type=bind,source=/yourpath/tvshows,target=/tvshows \</span><br><span class="line"> --mount type=bind,source=/yourpath/media,target=/media \</span><br><span class="line"> --device=/dev/dri/renderD128 \ #这个是用来开启硬件解码的，比较重要</span><br><span class="line"> --restart=unless-stopped \</span><br><span class="line">jellyfin/jellyfin:10.7.6-amd64</span><br></pre></td></tr></table></figure>
+<p>插件库</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">https://raw.githubusercontent.com/JavScraper/Emby.Plugins.JavScraper/master/manifest.json</span><br></pre></td></tr></table></figure>
+<hr>
+<h2 id="MariaDB-MySQL-数据库-docker安装">MariaDB/MySQL 数据库-docker安装</h2>
+<h3 id="部署MariaDB-Stack">部署MariaDB Stack</h3>
+<p>以下配置会同时在 Docker 中部署<code>MariaDB</code>和 <code>Adminer</code>两个应用容器，在执行一键部署之前，请先手动创建一个名为<code>mynet</code>的桥接类型网络。</p>
+<p>请将配置中的<code>ROOT_ACCESS_PASSWORD</code>替换成要给 root 用户设置的密码。</p>
+<h3 id="Mynet-桥接网络创建">Mynet 桥接网络创建</h3>
+<h3 id="部署adminer与mariadb">部署adminer与mariadb</h3>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line"> version: &quot;2&quot;</span><br><span class="line"> services:</span><br><span class="line"> mariadb:</span><br><span class="line">    image: linuxserver/mariadb</span><br><span class="line">    container_name: mariadb</span><br><span class="line">    environment:</span><br><span class="line">      - PUID=1000</span><br><span class="line">      - PGID=1000</span><br><span class="line">      - MYSQL_ROOT_PASSWORD=abc123</span><br><span class="line">      - TZ=Asia/Shanghai</span><br><span class="line">    volumes:</span><br><span class="line">      - /yourpath:/config</span><br><span class="line">    ports:</span><br><span class="line">      - 3306:3306</span><br><span class="line">    networks:</span><br><span class="line">      - mynet</span><br><span class="line">    restart: unless-stopped</span><br><span class="line"></span><br><span class="line"> adminer:</span><br><span class="line">    image: adminer</span><br><span class="line">    container_name: adminer</span><br><span class="line">    environment:</span><br><span class="line">      - ADMINER_DEFAULT_SERVER=mariadb</span><br><span class="line">    ports:</span><br><span class="line">      - 8080:8080</span><br><span class="line">    networks:</span><br><span class="line">      - mynet</span><br><span class="line">    restart: unless-stopped</span><br><span class="line"></span><br><span class="line"> networks:</span><br><span class="line">  mynet:</span><br><span class="line">    external:</span><br><span class="line">      name: mynet</span><br></pre></td></tr></table></figure>
+<h3 id="管理数据库">管理数据库</h3>
+<p>一键部署完成后，使用 <a href="http://192.168.123.78:8080">http://192.168.123.78:8080</a> 访问 adminer 的应用界面。<br><br>
+初次登录信息如下：<br></p>
+<blockquote>
+<p>系统：<code>MYSQL</code><br><br>
+服务器：<code>mariadb</code><br><br>
+用户名：<code>root</code><br><br>
+密码：<code>abc123</code></p>
+</blockquote>
+<hr>
+<h2 id="Nextcloud-Stack-docker-compose">Nextcloud Stack  (docker-compose)</h2>
+<p>在 Portainer 中创建 Stack 之前，请先添加一个名为 <code>mynet</code> 的网络。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">version: &quot;2&quot;</span><br><span class="line">services:</span><br><span class="line">  nextcloud:</span><br><span class="line">    image: linuxserver/nextcloud</span><br><span class="line">    container_name: nextcloud</span><br><span class="line">    environment:</span><br><span class="line">      - PUID=1000</span><br><span class="line">      - PGID=100</span><br><span class="line">      - TZ=Asia/Shanghai</span><br><span class="line">    volumes:</span><br><span class="line">      - /yourpath/config:/config</span><br><span class="line">      - /yourpath/:/data</span><br><span class="line">    networks:</span><br><span class="line">      - mynet</span><br><span class="line">    ports:</span><br><span class="line">      - 443:443</span><br><span class="line">    restart: unless-stopped</span><br><span class="line"></span><br><span class="line">networks:</span><br><span class="line">  mynet:</span><br><span class="line">    external:</span><br><span class="line">      name: mynet</span><br></pre></td></tr></table></figure>
+<p>创建数据库选择<code>utf8mb4_general_ci</code><br><br>
+权限-创建用户-勾选第一项–主机名:<code>mariadb</code><br></p>
+<h3 id="MariaDB-数据库的优化">MariaDB 数据库的优化</h3>
+<blockquote>
+<p>在数据库容量小于1GB时，且内存足够的情况下：</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mariadb/custom.cnf</span><br><span class="line"></span><br><span class="line">[mysqld]</span><br><span class="line">innodb_buffer_pool_size=1G</span><br><span class="line">innodb_io_capacity=4000</span><br></pre></td></tr></table></figure>
+<h3 id="PHP-FPM-的优化">PHP-FPM 的优化</h3>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">修改 nextcloud/config/php/www2.conf</span><br><span class="line"></span><br><span class="line">[www]</span><br><span class="line">pm = dynamic</span><br><span class="line">pm.max_children = 120</span><br><span class="line">pm.start_servers = 12</span><br><span class="line">pm.min_spare_servers = 6</span><br><span class="line">pm.max_spare_servers = 18</span><br></pre></td></tr></table></figure>
+<h3 id="添加受信任的域名">添加受信任的域名</h3>
+<blockquote>
+<p>查看已经设置的域名/IP</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker exec -it nextcloud occ config:system:get trusted_domains</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>添加新的域名</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker exec -it nextcloud occ config:system:set trusted_domains 编号 --value 域名/IP</span><br></pre></td></tr></table></figure>
+<h3 id="设置预览图尺寸">设置预览图尺寸</h3>
+<p>设置预览图的最大宽度，以下命令将预览图的最大宽度设置为1000像素，默认值为4096像素。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker exec -it nextcloud occ config:system:set preview_max_x --value=1000</span><br></pre></td></tr></table></figure>
+<p>设置预览图的最大高度，以下命令将预览图的最大宽度设置为800像素，默认值为4096像素。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker exec -it nextcloud occ config:system:set preview_max_y --value=800</span><br></pre></td></tr></table></figure>
+<h3 id="检查CPU是否支持AES-NI指令集">检查CPU是否支持AES-NI指令集</h3>
+<p><code>grep flags /proc/cpuinfo</code></p>
+<hr>
+<h2 id="Aria2-Pro-docker">Aria2 Pro-docker</h2>
+<h2 id="code￼11"><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker run -d \</span><br><span class="line"> --name aria2-pro \</span><br><span class="line"> --restart unless-stopped \</span><br><span class="line"> --log-opt max-size=1m \</span><br><span class="line"> --network host \</span><br><span class="line"> -e PUID=1000 \</span><br><span class="line"> -e PGID=100 \</span><br><span class="line"> -e RPC_SECRET=最好去网页上随机生成一个强密码 \</span><br><span class="line"> -e RPC_PORT=6800 \</span><br><span class="line"> -e LISTEN_PORT=6888 \</span><br><span class="line"> -v /srv/yourpath/config:/config \</span><br><span class="line"> -v /yourpath/downloads:/downloads \</span><br><span class="line">p3terx/aria2-pro</span><br></pre></td></tr></table></figure></h2>
+<h2 id="DDNSTO">DDNSTO</h2>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">docker run -d \</span><br><span class="line"> --name=ddnsto \</span><br><span class="line"> --network host \</span><br><span class="line"> -e TOKEN= \</span><br><span class="line"> -e DEVICE_IDX=0 \</span><br><span class="line"> -v /etc/localtime:/etc/localtime:ro \</span><br><span class="line"> -e PUID=1000 \</span><br><span class="line"> -e PGID=100 \</span><br><span class="line">linkease/ddnsto      </span><br></pre></td></tr></table></figure>]]></content>
+      <tags>
+        <tag>OMV</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>OMV5安装与初始化</title>
+    <url>/omv-start/</url>
+    <content><![CDATA[<h2 id="修改挂载目录">修改挂载目录</h2>
+<h3 id="·-使用Symlinks插件-br">· 使用Symlinks插件 <br></h3>
+<hr>
+<h3 id="·-修改配置文件-br">· 修改配置文件 <br></h3>
+ <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd /etc/openmediavault/</span><br><span class="line">sudo cp config.xml config.bak</span><br><span class="line">sudo nano config.xml</span><br><span class="line">使用 Ctrl+W 搜索 fstab</span><br><span class="line">修改dir</span><br><span class="line">sudo  omv-salt deploy run fstab</span><br></pre></td></tr></table></figure>
+<p><code>cat /etc/fstab</code> #查看挂载</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo omv-salt deploy run monit</span><br><span class="line">sudo reboot</span><br></pre></td></tr></table></figure>
+<p><code>mountpoint 新目录</code>  #确认挂载情况<br><br>
+<code>sudo rm -r 原有挂载目录</code></p>
+<hr>
+<h2 id="OMV-extras插件支持">OMV-extras插件支持</h2>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo -i</span><br><span class="line">wget -O - https://github.com/OpenMediaVault-Plugin-Developers/packages/raw/master/install | bash</span><br></pre></td></tr></table></figure>]]></content>
+      <tags>
+        <tag>OMV</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Python学习-数据列表</title>
+    <url>/python_day1/</url>
+    <content><![CDATA[<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">cast = [<span class="string">&quot;Cleese&quot;</span>,<span class="string">&#x27;Palin&#x27;</span>, <span class="string">&#x27;Jones&#x27;</span>, <span class="string">&#x27;Idle&#x27;</span>]</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br><span class="line"></span><br><span class="line">cast.append(<span class="string">&#x27;Gilliam&#x27;</span>)  <span class="comment">#电记法 &quot;.&quot;  append--在列表末尾增加数据项</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br><span class="line"></span><br><span class="line">cast.pop() <span class="comment">#pop--从列表末尾删除数据项</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br><span class="line"></span><br><span class="line">cast.extend([<span class="string">&quot;Gilliam&quot;</span>, <span class="string">&quot;Chapman&quot;</span>]) <span class="comment">#extend--在列表末尾增加一个数据项集合</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br><span class="line"></span><br><span class="line">cast.remove(<span class="string">&quot;Chapman&quot;</span>) <span class="comment">#列表中找到并删除一个特定的数据项</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br><span class="line"></span><br><span class="line">cast.insert(<span class="number">0</span>,<span class="string">&quot;Chapman&quot;</span>) <span class="comment">#列表中特定位置前插入数据项</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(cast)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">[&#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;]</span><br><span class="line">[&#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;, &#x27;Gilliam&#x27;]</span><br><span class="line">[&#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;]</span><br><span class="line">[&#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;, &#x27;Gilliam&#x27;, &#x27;Chapman&#x27;]</span><br><span class="line">[&#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;, &#x27;Gilliam&#x27;]</span><br><span class="line">[&#x27;Chapman&#x27;, &#x27;Cleese&#x27;, &#x27;Palin&#x27;, &#x27;Jones&#x27;, &#x27;Idle&#x27;, &#x27;Gilliam&#x27;]</span><br></pre></td></tr></table></figure>
+<div class="tabs" id="test4"><ul class="nav-tabs"><li class="tab active"><button type="button" data-href="#test4-1">使用插入语句，插入相应电影年份</button></li><li class="tab"><button type="button" data-href="#test4-2">从头开始构建列表数据</button></li></ul><div class="tab-contents"><div class="tab-item-content active" id="test4-1"><figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [<span class="string">&quot;The Holy Grail&quot;</span>, </span><br><span class="line">          <span class="string">&#x27;The Life of Brian&#x27;</span>, </span><br><span class="line">          <span class="string">&#x27;The Meaning of Life&#x27;</span>]</span><br><span class="line">movies.insert (<span class="number">1</span>,<span class="number">1975</span>)</span><br><span class="line">movies.insert (<span class="number">3</span>,<span class="number">1979</span>)</span><br><span class="line">movies.append(<span class="number">1983</span>)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(movies)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">[&#x27;The Holy Grail&#x27;, 1975, &#x27;The Life of Brian&#x27;, 1979, &#x27;The Meaning of Life&#x27;, 1983]</span><br></pre></td></tr></table></figure><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="test4-2"><figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [<span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, </span><br><span class="line">          <span class="string">&#x27;The Life of Brian&#x27;</span>, <span class="number">1979</span>, </span><br><span class="line">          <span class="string">&#x27;The Meaning of Life&#x27;</span>, <span class="number">1983</span>]</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(movies)</span><br></pre></td></tr></table></figure>
+<p>从头开始构建列表数据，适用于少量数据的情况，避免了需要插入数据而进行位置的计算。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">[&#x27;The Holy Grail&#x27;, 1975, &#x27;The Life of Brian&#x27;, 1979, &#x27;The Meaning of Life&#x27;, 1983]</span><br></pre></td></tr></table></figure><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div></div></div>
+<p>在需要迭代处理数据时</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">fav_movies = [<span class="string">&#x27;The Holy Grail&#x27;</span>,</span><br><span class="line">              <span class="string">&#x27;The Life of Brian&#x27;</span>]</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(fav_movies[<span class="number">0</span>])</span><br><span class="line"><span class="built_in">print</span>(fav_movies[<span class="number">1</span>])</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">The Life of Brian</span><br></pre></td></tr></table></figure>
+<p>尽管能满足迭代的需求，但在面对以后列表数据增加后，就不能达到预期的效果了；而且若面对大量数据，多次print非常麻烦，因此可引入<strong>for</strong>循环</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">fav_movies = [<span class="string">&#x27;The Holy Grail&#x27;</span>,</span><br><span class="line">              <span class="string">&#x27;The Life of Brian&#x27;</span>]</span><br><span class="line">            </span><br><span class="line"><span class="keyword">for</span> each_flick <span class="keyword">in</span> fav_movies:</span><br><span class="line"><span class="comment">#使用for迭代处理列表，并将各列表值显示</span></span><br><span class="line">    <span class="built_in">print</span>(each_flick)</span><br><span class="line"></span><br><span class="line">fav_movies.append(<span class="string">&#x27;The Meaning of Life&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> each_flick <span class="keyword">in</span> fav_movies:</span><br><span class="line">    <span class="built_in">print</span>(each_flick)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">The Life of Brian</span><br><span class="line">The Holy Grail</span><br><span class="line">The Life of Brian</span><br><span class="line">The Meaning of Life</span><br></pre></td></tr></table></figure>
+<p><strong>使用for循环是可伸缩的，适用于任意大小的列表</strong><br>
+语法： for <code>目标标识符</code> in <code>列表</code> :<br>
+列表的处理代码称为<em>组 （suite）</em><br>
+<em>目标标识符（target identifier）</em> 类似代码中任何其它名<br>
+<strong>尽管<code>while</code>也能完成<code>for</code>的功能，但除非有特别充分的理由，则仍选择<code>for</code></strong></p>
+]]></content>
+      <tags>
+        <tag>python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Python学习-递归函数</title>
+    <url>/python_day2/</url>
+    <content><![CDATA[<p>在列表中嵌套列表</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [</span><br><span class="line">    <span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, <span class="string">&#x27;Therry Jones &amp; Terry Gilliam&#x27;</span>, <span class="number">91</span>,</span><br><span class="line">    [<span class="string">&#x27;Graham Chapman&#x27;</span>, [</span><br><span class="line">        <span class="string">&#x27;Michael Palin&#x27;</span>, <span class="string">&#x27;John Cleese&#x27;</span>, <span class="string">&#x27;Terry Gilliam&#x27;</span>, <span class="string">&#x27;Eric Idle&#x27;</span>, <span class="string">&#x27;Terry Jones&#x27;</span></span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    ]</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(movies[<span class="number">4</span>][<span class="number">1</span>][<span class="number">3</span>])</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Eric Idle</span><br></pre></td></tr></table></figure>
+<p>使用中括号法进行嵌套访问。</p>
+<p>若引入for循环：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [</span><br><span class="line">    <span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, <span class="string">&#x27;Therry Jones &amp; Terry Gilliam&#x27;</span>, <span class="number">91</span>,</span><br><span class="line">    [<span class="string">&#x27;Graham Chapman&#x27;</span>, [</span><br><span class="line">        <span class="string">&#x27;Michael Palin&#x27;</span>, <span class="string">&#x27;John Cleese&#x27;</span>, <span class="string">&#x27;Terry Gilliam&#x27;</span>, <span class="string">&#x27;Eric Idle&#x27;</span>, <span class="string">&#x27;Terry Jones&#x27;</span></span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    ]</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> each_item <span class="keyword">in</span> movies:</span><br><span class="line">    <span class="built_in">print</span>(each_item)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">1975</span><br><span class="line">Therry Jones &amp; Terry Gilliam</span><br><span class="line">91</span><br><span class="line">[&#x27;Graham Chapman&#x27;, [&#x27;Michael Palin&#x27;, &#x27;John Cleese&#x27;, &#x27;Terry Gilliam&#x27;, &#x27;Eric Idle&#x27;, &#x27;Terry Jones&#x27;]]</span><br></pre></td></tr></table></figure>
+<p>此时会发现嵌套的列表被原样打印。</p>
+<p>如何在列表中查找列表，此处可引入<code>if ... else ...</code>模式：</p>
+<p><code>if</code> <code>某个满足的条件</code>: (“ture组”)<br>
+<code>else</code>: (“false组”)</p>
+<p>在python中有一个BIF：<code>isinstance()</code>，即允许检查某个特定的标识符是否包含某特定类型数据。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">name = [<span class="string">&#x27;Michael&#x27;</span>, <span class="string">&#x27;Terry&#x27;</span>]</span><br><span class="line"><span class="built_in">isinstance</span>(name, <span class="built_in">list</span>)</span><br><span class="line"><span class="comment">#&gt;&gt;&gt; Ture</span></span><br><span class="line">num_name = <span class="built_in">len</span>(name)</span><br><span class="line"><span class="built_in">isinstance</span>(num_name, <span class="built_in">list</span>)</span><br><span class="line"><span class="comment">#&gt;&gt;&gt; False</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [</span><br><span class="line">    <span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, <span class="string">&#x27;Therry Jones &amp; Terry Gilliam&#x27;</span>, <span class="number">91</span>,</span><br><span class="line">    [<span class="string">&#x27;Graham Chapman&#x27;</span>, [</span><br><span class="line">        <span class="string">&#x27;Michael Palin&#x27;</span>, <span class="string">&#x27;John Cleese&#x27;</span>, <span class="string">&#x27;Terry Gilliam&#x27;</span>, <span class="string">&#x27;Eric Idle&#x27;</span>, <span class="string">&#x27;Terry Jones&#x27;</span></span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    ]</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> each_item <span class="keyword">in</span> movies:</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">isinstance</span>(each_item, <span class="built_in">list</span>):  <span class="comment">#判断是否为列表</span></span><br><span class="line">        <span class="keyword">for</span> nested_item <span class="keyword">in</span> each_item:</span><br><span class="line">            <span class="built_in">print</span>(nested_item)  <span class="comment">#是，使用for处理</span></span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="built_in">print</span>(each_item)  <span class="comment">#不是，直接输出</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">1975</span><br><span class="line">Therry Jones &amp; Terry Gilliam</span><br><span class="line">91</span><br><span class="line">Graham Chapman</span><br><span class="line">[&#x27;Michael Palin&#x27;, &#x27;John Cleese&#x27;, &#x27;Terry Gilliam&#x27;, &#x27;Eric Idle&#x27;, &#x27;Terry Jones&#x27;]</span><br></pre></td></tr></table></figure>
+<p>可以发现最后一行的嵌套列表依然没有处理。</p>
+<p>需要处理多个嵌套列表，则引入多次</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> <span class="built_in">isinstance</span>(sth, <span class="built_in">list</span>):</span><br><span class="line">        <span class="keyword">for</span> oth <span class="keyword">in</span> sth:</span><br><span class="line">            <span class="built_in">print</span>(oth)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="built_in">print</span>(sth)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [</span><br><span class="line">    <span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, <span class="string">&#x27;Therry Jones &amp; Terry Gilliam&#x27;</span>, <span class="number">91</span>,</span><br><span class="line">    [<span class="string">&#x27;Graham Chapman&#x27;</span>, [</span><br><span class="line">        <span class="string">&#x27;Michael Palin&#x27;</span>, <span class="string">&#x27;John Cleese&#x27;</span>, <span class="string">&#x27;Terry Gilliam&#x27;</span>, <span class="string">&#x27;Eric Idle&#x27;</span>, <span class="string">&#x27;Terry Jones&#x27;</span></span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    ]</span><br><span class="line">]</span><br><span class="line"><span class="keyword">for</span> each_item <span class="keyword">in</span> movies:</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">isinstance</span>(each_item, <span class="built_in">list</span>):</span><br><span class="line">        <span class="keyword">for</span> nested_item <span class="keyword">in</span> each_item:</span><br><span class="line">            <span class="keyword">if</span> <span class="built_in">isinstance</span>(nested_item, <span class="built_in">list</span>):</span><br><span class="line">                <span class="keyword">for</span> deeper_item <span class="keyword">in</span> nested_item:</span><br><span class="line">                    <span class="built_in">print</span>(deeper_item)</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                    <span class="built_in">print</span>(nested_item)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">            <span class="built_in">print</span>(each_item)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">1975</span><br><span class="line">Therry Jones &amp; Terry Gilliam</span><br><span class="line">91</span><br><span class="line">Graham Chapman</span><br><span class="line">Michael Palin</span><br><span class="line">John Cleese</span><br><span class="line">Terry Gilliam</span><br><span class="line">Eric Idle</span><br><span class="line">Terry Jones</span><br></pre></td></tr></table></figure>
+<p><strong>在使用<code>if...else...</code>一定要注意缩进！！</strong></p>
+<p>但是，如果列表中的嵌套列表非常多，使用大量的嵌套循环会使代码更复杂。</p>
+<p>为了避免不断使用重复代码，那么可以通过创建函数并调用。</p>
+<p>python中，函数是一个命名的代码组，使用<code>def</code>语句定义。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> 函数名 (<span class="params">参数</span>):</span></span><br><span class="line">      代码组</span><br></pre></td></tr></table></figure>
+<p>参数是可选的，但括号不能省略。代码组必须在def语句下缩进。</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">movies = [</span><br><span class="line">    <span class="string">&#x27;The Holy Grail&#x27;</span>, <span class="number">1975</span>, <span class="string">&#x27;Therry Jones &amp; Terry Gilliam&#x27;</span>, <span class="number">91</span>,</span><br><span class="line">    [<span class="string">&#x27;Graham Chapman&#x27;</span>, [</span><br><span class="line">        <span class="string">&#x27;Michael Palin&#x27;</span>, <span class="string">&#x27;John Cleese&#x27;</span>, <span class="string">&#x27;Terry Gilliam&#x27;</span>, <span class="string">&#x27;Eric Idle&#x27;</span>, <span class="string">&#x27;Terry Jones&#x27;</span></span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    ]</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">print_lol</span> (<span class="params">the_list</span>):</span></span><br><span class="line">    <span class="keyword">for</span> each_item <span class="keyword">in</span> the_list:</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">isinstance</span>(each_item, <span class="built_in">list</span>):</span><br><span class="line">            print_lol(each_item) <span class="comment">#如果是列表，则调用函数</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="built_in">print</span>(each_item)  <span class="comment">#不是列表，直接输出</span></span><br><span class="line"></span><br><span class="line">print_lol(movies)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">The Holy Grail</span><br><span class="line">1975</span><br><span class="line">Therry Jones &amp; Terry Gilliam</span><br><span class="line">91</span><br><span class="line">Graham Chapman</span><br><span class="line">Michael Palin</span><br><span class="line">John Cleese</span><br><span class="line">Terry Gilliam</span><br><span class="line">Eric Idle</span><br><span class="line">Terry Jones</span><br></pre></td></tr></table></figure>
+<p>以上，就是递归函数的运作方式。</p>
+<p>在python3中默认递归深度不超过100</p>
+]]></content>
+      <tags>
+        <tag>python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/hello-world/</url>
+    <content><![CDATA[<h2 id="此贴用于留存">此贴用于留存</h2>
+<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start">Quick Start</h2>
+<h3 id="Create-a-new-post">Create a new post</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server">Run server</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files">Generate static files</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites">Deploy to remote sites</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+      <tags>
+        <tag>blog</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>博客主题模板</title>
+    <url>/sec-blog/</url>
+    <content><![CDATA[<h1>颜色高亮</h1>
+<mark class="hl-label default">默认</mark>  <mark class="hl-label red">红</mark>  <mark class="hl-label blue">蓝</mark>  <mark class="hl-label orange">橘</mark>  <mark class="hl-label green">绿</mark>  <mark class="hl-label pink">粉</mark> <mark class="hl-label purple">紫</mark>  
+<h1>tab栏</h1>
+<div class="tabs" id="test4"><ul class="nav-tabs"><li class="tab active"><button type="button" data-href="#test4-1">Tab1</button></li><li class="tab"><button type="button" data-href="#test4-2">Tab2</button></li><li class="tab"><button type="button" data-href="#test4-3">Tab3</button></li></ul><div class="tab-contents"><div class="tab-item-content active" id="test4-1"><p>1</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="test4-2"><p>2</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="test4-3"><p>3</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div></div></div>
+<h1>隐藏</h1>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>隐藏名</span></div>
+    <div class="hide-content"><p>隐藏内容</p>
+</div></div>]]></content>
+      <tags>
+        <tag>blog</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>史纲分析题</title>
+    <url>/Modern-Chinese-History/</url>
+    <content><![CDATA[<h1>通用模板</h1>
+<mark class="hl-label orange">辛亥革命背景</mark> ：一八四零年鸦片战争后，中国逐步沦为半殖民地半封建社会，中华民族遭受了前所未有的劫难，<br>
+<mark class="hl-label red">“双民+双富”</mark> ：并面临着争取<mark class="hl-label default">民族独立、人民解放</mark> 和实现<mark class="hl-label default">国家富强、人民富裕</mark> 的两大历史任务。<br>
+<p>1911年10月10日，武昌起义拉开了中国完全意义上的近代<mark class="hl-label red">民</mark> 族<mark class="hl-label red">民</mark> 主革命的序幕。<br></p>
+<mark class="hl-label orange">马克思主义背景</mark> ：十月革命一声炮响给中国送来了马克思主义。<br>
+<mark class="hl-label blue">党+马克思</mark> ：我们始终把马克思主义作为行动指南，始终坚持用马克思主义中国化最新成果武装全党<br>
+<mark class="hl-label blue">中国+马克思</mark> ：实现了马克思主义中国化的三次飞跃，并指导实践走出中国特色社会主义道路。<br>
+<mark class="hl-label blue">世界+马克思</mark> ：创造了人类文明新形态，以崭新形象展现在世界上，使发生有利于社会主义的重大转变。<br>
+<mark class="hl-label green">党的诞生背景</mark> ：一百年前，<mark class="hl-label red">马克思列宁主义</mark> 与中国工人运动相结合，产生了中国共产党,这是开天辟地的大事变。从此，中国人民有了前进的主心骨，中国人民在精神上由被动变主动，革命面貌焕然一新。<br>
+<mark class="hl-label green">初心使命</mark> ：中国共产党一经诞生就把为中国<mark class="hl-label red">人民谋幸福</mark> ，为中华<mark class="hl-label red">民族谋复兴</mark> 确立为初心使命。<br>
+<blockquote>
+<mark class="hl-label red">“为双民谋双xin”</mark> 
+</blockquote>
+<mark class="hl-label green">过去百年</mark> <mark class="hl-label orange">成就</mark> ：<br>
+<mark class="hl-label orange">简写</mark> ：我们党团结带领人民创造了新民主主义革命胜利，社会主义革命和建设改革开放和社会主义现代化建设新时代中国特色社会主义的<mark class="hl-label orange">四个伟大成就</mark> 。<br>
+<mark class="hl-label orange">详写</mark> ：<br>
+<p><strong>建国前</strong>,为实现(第一大历史任务)<strong>民族独立、人民解放</strong>，我们党团结带领人民创造了<strong>新民主主义革命胜利</strong>的伟大成就建立了新中国。<br></p>
+<blockquote>
+<mark class="hl-label red">双民</mark> 
+</blockquote>
+<p><strong>新中国成立后</strong>，为改变我国<strong>一穷二白的落后面貌</strong>，我们党团结带领人民<strong>创造了社会主义革命和建设</strong>的伟大成就。<br><br>
+<strong>改革开放新时期</strong>，我们党团结带领人民创造了<strong>改革开放和社会主义现代化建设的伟大成就</strong>，中华民族以崭新姿态<strong>屹立于世界</strong>民族之林。<br><br>
+中国特色社会主义进入<mark class="hl-label red">新时代</mark> ，<mark class="hl-label blue">思想上</mark> ：为全党不在一片赞扬声中<strong>丧失革命斗志</strong>，我们党把<strong>不忘初心、牢记使命</strong>作为加强党的建设的永恒课题。<mark class="hl-label blue">实践上</mark> ：<strong>第一个百年目标——全面建成小康社会</strong>的实现，只是我们迈向中华民族伟大复兴的第一步。<br></p>
+<mark class="hl-label blue">总结</mark> ：我们党团结带领人民进行的一切<mark class="hl-label default">奋斗、牺牲、创造</mark> ,归结起来是<mark class="hl-label default">一个主题</mark> ：<mark class="hl-label red">实现中华民族的伟大复兴</mark> 。<br>
+<mark class="hl-label orange">意义</mark> ：马克思主义的强大生命力+人民前途+世界历史进程+世界前列的中国共产党+中华民族伟大复兴的正确道路。<br>
+<mark class="hl-label blue">重要性</mark> <mark class="hl-label orange">党的领导/两个确立</mark> ：关系党和国家的前途命运，关系国家富强、民族复兴和人民幸福的中国梦。对新时代党和国家事业发展、推进中华民族伟大复兴历史进程具有决定性意义。<br>
+<mark class="hl-label blue">现在</mark> <mark class="hl-label default">(衔接/结束语)</mark> ：<mark class="hl-label blue">中国共产党和中国人民英勇顽强的奋斗向世界庄严宣告</mark> ，在马克思主义的指导和中国共产党的领导下中华民族迎来了从站起来富起来到强起来的伟大飞跃，实现中华民族伟大复兴进入了不可逆转的历史进程。<br>
+<mark class="hl-label blue">未来</mark> ：<mark class="hl-label orange">目标</mark> ：继续完成第二大历史任务——**国家富强、人民富裕**，为第二个百年目标——全面建成社会主义现代化强国、实现中华民族伟大复兴而奋斗。
+<blockquote>
+<mark class="hl-label red">双富</mark> 
+</blockquote>
+<mark class="hl-label orange">优势（信心来源）</mark> ：领导核心、理论指导、中国力量、制度保障、物质基础、精神力量。
+<blockquote>
+<p>两个确立：123123</p>
+</blockquote>
+<mark class="hl-label orange">怎么做</mark>  ：<mark class="hl-label red">党人治</mark> <br>
+<p>坚持<mark class="hl-label red">党</mark> 的领导：充分发挥党总揽全局，协调各方的领导核心作用；<br><br>
+<strong>增强党</strong>：增强“四个意识”、坚定“四个自信”、做到两个维护，确保全党步调一致；<br><br>
+<strong>党的自我革命</strong>：坚持党要管党、从严治党；深入解决党内突出矛盾；提高应对“四大考验”和“四大危险”的能力；推进党的建设新的伟大工程。</p>
+<blockquote>
+<p>四大考验: 1234<br>
+四大危险: 4324</p>
+</blockquote>
+<p>以<mark class="hl-label red">人</mark> 民为中心：（国家层面）大力发展社会主义民主+人民当家作主的制度体系；<br><br>
+（党的层面）群众观点：姐夫复习，群众路线：想考联通客服。<br></p>
+<mark class="hl-label red">治</mark> ： 以政治建设为统领；<br>
+<hr>
+<h1>第一套</h1>
+<div class="tabs" id="4"><ul class="nav-tabs"><li class="tab active"><button type="button" data-href="#4-1">1-1.党的初心使命+过去成就+未来目标</button></li><li class="tab"><button type="button" data-href="#4-2">主观条件+客观需要</button></li><li class="tab"><button type="button" data-href="#4-3">重要性+展开解释两个确立</button></li></ul><div class="tab-contents"><div class="tab-item-content active" id="4-1"><p><mark class="hl-label green">初心使命</mark> ：中国共产党一经诞生就把为中国<mark class="hl-label red">人民谋幸福</mark> ，为中华<mark class="hl-label red">民族谋复兴</mark> 确立为初心使命。<br>
+<mark class="hl-label green">过去百年</mark> <mark class="hl-label orange">成就</mark> ：<br><br>
+<mark class="hl-label orange">详写</mark> ：<br><br>
+<strong>建国前</strong>,为实现(第一大历史任务)<strong>民族独立、人民解放</strong>，我们党团结带领人民创造了<strong>新民主主义革命胜利</strong>的伟大成就建立了新中国。<br></p>
+<blockquote>
+<p><mark class="hl-label red">双民</mark></p>
+</blockquote>
+<p><strong>新中国成立后</strong>，为改变我国<strong>一穷二白的落后面貌</strong>，我们党团结带领人民<strong>创造了社会主义革命和建设</strong>的伟大成就。<br><br>
+<strong>改革开放新时期</strong>，我们党团结带领人民创造了<strong>改革开放和社会主义现代化建设的伟大成就</strong>，中华民族以崭新姿态<strong>屹立于世界</strong>民族之林。<br><br>
+中国特色社会主义进入<mark class="hl-label red">新时代</mark> ，<mark class="hl-label blue">思想上</mark> ：为全党不在一片赞扬声中<strong>丧失革命斗志</strong>，我们党把<strong>不忘初心、牢记使命</strong>作为加强党的建设的永恒课题。<mark class="hl-label blue">实践上</mark> ：<strong>第一个百年目标——全面建成小康社会</strong>的实现，只是我们迈向中华民族伟大复兴的第一步。<br><br>
+<mark class="hl-label blue">总结</mark> ：我们党团结带领人民进行的一切<mark class="hl-label default">奋斗、牺牲、创造</mark> ,归结起来是<mark class="hl-label default">一个主题</mark> ：<mark class="hl-label red">实现中华民族的伟大复兴</mark> 。<br><br>
+<mark class="hl-label blue">现在</mark> <mark class="hl-label default">(衔接/结束语)</mark> ：<mark class="hl-label blue">中国共产党和中国人民英勇顽强的奋斗向世界庄严宣告</mark> ，在马克思主义的指导和中国共产党的领导下中华民族迎来了从站起来富起来到强起来的伟大飞跃，实现中华民族伟大复兴进入了不可逆转的历史进程。<br></p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="4-2"><p><mark class="hl-label blue">主观条件</mark> ：我们党高度注重总结历史经验。<br>
+<mark class="hl-label blue">前两个</mark> (<mark class="hl-label red">是统领</mark> )：前两个历史决议：①实事求<mark class="hl-label red">是</mark> 总结党内重大历史事件和重要经验教训。②在重大历史关头<mark class="hl-label red">统</mark> 一了全党思想和行动。③对推进“党和人民事业”发挥了重要引<mark class="hl-label red">领</mark> 作用<br>
+<mark class="hl-label blue">客观需要</mark> ：距第二个历史决议制定已过去40年。40年来党和国家事业以及党的理论和实践大大向前发展。<br>
+<mark class="hl-label blue">抄题</mark> ：“制定第三个历史决议”是<br>
+<mark class="hl-label blue">未来</mark> ：<mark class="hl-label orange">目标</mark> ：继续完成第二大历史任务——<strong>国家富强、人民富裕</strong>，为第二个百年目标——全面建成社会主义现代化强国、实现中华民族伟大复兴而奋斗的需要。<br>
+<mark class="hl-label orange">怎么做</mark>  ：<mark class="hl-label red">党人治</mark> <br><br>
+坚持<mark class="hl-label red">党</mark> 的领导：充分发挥党总揽全局，协调各方的领导核心作用；<br><br>
+<strong>增强党</strong>：增强“四个意识”、坚定“四个自信”、做到两个维护，确保全党步调一致；<br><br>
+<strong>党的自我革命</strong>：坚持党要管党、从严治党；深入解决党内突出矛盾；提高应对“四大考验”和“四大危险”的能力；推进党的建设新的伟大工程的需要。</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="4-3"><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div></div></div>]]></content>
+      <tags>
+        <tag>考研政治</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>工艺流程</title>
+    <url>/gylc/</url>
+    <content><![CDATA[
+
+	<div class="row">
+    <embed src="/gylc.pdf" width="100%" height="550" type="application/pdf">
+	</div>
+
+
+]]></content>
+      <tags>
+        <tag>生产实习</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>数控加工零件图</title>
+    <url>/CNC-1/</url>
+    <content><![CDATA[<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E6%95%B0%E6%8E%A7%E5%8A%A0%E5%B7%A5%E9%9B%B6%E4%BB%B62.736wkghzn380.webp" alt="1"></p>
+]]></content>
+      <tags>
+        <tag>生产实习</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>机械原理真题</title>
+    <url>/zhenti/</url>
+    <content><![CDATA[<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/21%E6%9C%BA%E6%A2%B0%E5%8E%9F%E7%90%86%E7%9C%9F%E9%A2%98_%E9%A1%B5%E9%9D%A2_1.5im6d28aacs0.webp" alt="1-4"><br>
+<img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/21%E6%9C%BA%E6%A2%B0%E5%8E%9F%E7%90%86%E7%9C%9F%E9%A2%98_%E9%A1%B5%E9%9D%A2_2.1gsjjlwz5ai.webp" alt="2-4"><br>
+<img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/21%E6%9C%BA%E6%A2%B0%E5%8E%9F%E7%90%86%E7%9C%9F%E9%A2%98_%E9%A1%B5%E9%9D%A2_3.6gayhf334mg0.webp" alt="3-4"><br>
+<img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/21%E6%9C%BA%E6%A2%B0%E5%8E%9F%E7%90%86%E7%9C%9F%E9%A2%98_%E9%A1%B5%E9%9D%A2_4.5vmgz4lrh680.webp" alt="1-4"></p>
+]]></content>
+      <tags>
+        <tag>机械考研</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>毛中特</title>
+    <url>/MZT/</url>
+    <content><![CDATA[<mark class="hl-label blue">共同富裕</mark> 是社会主义的本质要求，是社会主义现代化的重要目标和重要特征。<br>
+<mark class="hl-label blue">高质量发展</mark> 是
+<ul>
+<li>能很好满足<mark class="hl-label default">人民日益增长的美好生活需要</mark> 的发展</li>
+<li>体现新发展理念的发展</li>
+<li>
+<mark class="hl-label default">“创新成为第一驱动力、开放成为必由之路、协调成为内生特点、共享成为根本目的、绿色成为普遍形态。”</mark> 的发展(助记：心动开塞露，shit享真的绿)
+</li>
+</ul>
+<p>构建新发展格局的内涵是以国内大<mark class="hl-label red">循环</mark> 为主体，国内国际双<mark class="hl-label red">循环</mark> 相互促进，最<mark class="hl-label red">本质特</mark> 征是实现高水平的自<mark class="hl-label red">立</mark> 自<mark class="hl-label red">强</mark> ，<mark class="hl-label red">关</mark> 键是经济畅<mark class="hl-label red">通</mark> 无阻，以扩大<mark class="hl-label red">内</mark> 需作为战略<mark class="hl-label red">基</mark> 点，以供给<mark class="hl-label red">侧</mark> 结构性改革作为战略方<mark class="hl-label red">向</mark> 。（助记：本特利和关晓彤循环内急向厕）</p>
+<p>“三者紧密联系”是由我国经济社会发展的<mark class="hl-label default">理论</mark> 逻辑、<mark class="hl-label default">历史</mark> 逻辑、<mark class="hl-label default">现实</mark> 逻辑决定。<br></p>
+<ul>
+<li>
+<mark class="hl-label red">阶段shi</mark> ：进入新发展阶段明确了我国的<mark class="hl-label default">历</mark> <mark class="hl-label red">史</mark> <mark class="hl-label default">方位</mark> ，是贯彻新发展理念、构建新发展格局的<mark class="hl-label default">现</mark> <mark class="hl-label red">实</mark> <mark class="hl-label default">依据</mark> 
+</li>
+<li>
+<mark class="hl-label red">指理念</mark> ：贯彻新发展理念明确了我国现代化建设的<mark class="hl-label red">指</mark> <mark class="hl-label default">导原则</mark> ，为把握新发展阶段、构建新发展格局提供了<mark class="hl-label default">行动</mark> <mark class="hl-label red">指</mark> <mark class="hl-label default">南</mark> 
+</li>
+<li>
+<mark class="hl-label red">选格局</mark> ：构建新发展格局明确了我国经济现代化的<mark class="hl-label default">路径</mark> <mark class="hl-label red">选</mark> <mark class="hl-label default">择</mark> ，是应对新发展阶段机遇挑战、贯彻新发展理念的<mark class="hl-label default">战略</mark> <mark class="hl-label red">选</mark> <mark class="hl-label default">择</mark> </li>
+</ul>
+]]></content>
+      <tags>
+        <tag>考研政治</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>结束啦！</title>
+    <url>/ending/</url>
+    <content><![CDATA[<h1>考研终于结束了！</h1>
+<p>接下来有更多的时间去规划安排提升自己的事了。</p>
+<ul>
+<li>学Python</li>
+<li>大作业以及毕设</li>
+<li>电吉他</li>
+</ul>
+]]></content>
+      <tags>
+        <tag>blog</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>英语作文模板总结</title>
+    <url>/English-writing/</url>
+    <content><![CDATA[<h1>信件类</h1>
+<h2 id="开头">开头</h2>
+<p>How are you? I haven’t seen you for a while. Hope all as well. <br><br>
+Anyway, I’m writing because I want to …</p>
+<h2 id="结尾">结尾</h2>
+<p>I’m look forward to hearing from you soon. Take care and see you soon.</p>
+<h2 id="感谢信">感谢信</h2>
+<div class="tabs" id="4"><ul class="nav-tabs"><li class="tab active"><button type="button" data-href="#4-1">感谢信</button></li><li class="tab"><button type="button" data-href="#4-2">邀请信</button></li><li class="tab"><button type="button" data-href="#4-3">请求信</button></li><li class="tab"><button type="button" data-href="#4-4">祝贺信</button></li></ul><div class="tab-contents"><div class="tab-item-content active" id="4-1"><p>thank you vary much for …, It’s hard for me to forget that you did at the time.<br><br>
+This is to tell you again how much I appreciate you. Every moment was a delight …<br><br>
+You must give me the chance to thank you.</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="4-2"><p>invite you over for …, and I think you’d like to join.<br><br>
+交代时间+地点+活动内容<br><br>
+交代会如何安排流程<br></p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="4-3"><p>ask for your kindness assistance.<br><br>
+交代请求内容<br><br>
+交代请求原因与需求<br><br>
+Thank you so much for your generous help in this matter.</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div><div class="tab-item-content" id="4-4"><p>congratulations upon having …<br><br>
+I konw this is the result of your efforts.<br><br>
+I have followed this going with pleasure and interest.<br><br>
+I’m sure, from your efforts, you will be a success in whatever you undertake.</p><button type="button" class="tab-to-top" aria-label="scroll to top"><i class="fas fa-arrow-up"></i></button></div></div></div>
+<h1>告示类</h1>
+<p><strong>Notice/Announcement</strong></p>
+<h2 id="开头-2">开头</h2>
+<ul>
+<li>It is notice/ announced/ made public that …</li>
+<li>Owing to/ due to/ because of/ in order to …, we beg to inform you that …</li>
+<li>Wellcom to …</li>
+</ul>
+<h2 id="中间">中间</h2>
+<p>You can be involved in a variety of activities, including sth.<br>
+These activities are high beneficial in multiple regards. First, … . Second, … .</p>
+<h2 id="结尾-2">结尾</h2>
+<blockquote>
+<p>联系方式/注意事项</p>
+</blockquote>
+<p>If  you are interested in this activity, please fell free to contact us via 联系方式. The deadline is 日期. Come and join us now!</p>
+<hr>
+<h1>大作文</h1>
+<h2 id="开头-3">开头</h2>
+<p>As is vividly revealed in the photo/drawing/cartoon,描述图像内容. We are informed that“图中的文字内容”.<br></p>
+<ul>
+<li>The author’s real purpose is not the picture itself, but to lead us find what hides behind the iceberg.</li>
+</ul>
+<blockquote>
+<p>作者有反讽意图用</p>
+</blockquote>
+<ul>
+<li>In fact, what the author wants to express is very obvious.</li>
+</ul>
+<blockquote>
+<p>作者想要表达的很明显</p>
+</blockquote>
+<h2 id="中间：提出观点后要提供相应的论据">中间：提出观点后要提供相应的论据</h2>
+<p>Undoubtedly, we can deduce from the photo/drawing/cartoon that the author/cartoonist intends to attract our attention to the issue of 文章主题词.<br></p>
+<blockquote>
+<p>主题中心句，围绕此句开始论述。</p>
+</blockquote>
+<p>The point is best illustracted by the example of 中心点. we should know 举示例. Although … .<br></p>
+<blockquote>
+<p>围绕中心词举例：我们应该清楚…。尽管…，但是…。<br></p>
+</blockquote>
+<p>Why does this happen? I can think of no better reasons for the phenomenon other than the following two.</p>
+<blockquote>
+<p>举例论证导致该现象发生的两个原因</p>
+</blockquote>
+<h2 id="结尾-3">结尾</h2>
+<p>From my perspective, …</p>
+<blockquote>
+<p>阐述自己的观点</p>
+</blockquote>
+<ul>
+<li>In terms of …, we should take advantages of the fruits and avoid the opposite facet.</li>
+</ul>
+<blockquote>
+<p>正面/中立 话题</p>
+</blockquote>
+<ul>
+<li>On the macro level, the goverment and the mass media need to shoulder their social responsibility to …</li>
+</ul>
+<blockquote>
+<p>负面问题</p>
+</blockquote>
+<p>To sum up, it is a positive/nagative trend and should be simulated/controlled, since it is beneficial not merely to individuals but to the whole society.</p>
+<blockquote>
+<p>总之，积极应当被鼓励/消极应当被控制，对个人和社会都是有益的。</p>
+</blockquote>
+]]></content>
+      <tags>
+        <tag>英语作文</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>马原分析题</title>
+    <url>/Principles%20of%20Marxism/</url>
+    <content><![CDATA[<h1>第一套</h1>
+<h2 id="1-1">1-1</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/my1-1.5qu9ad3eshk0.png" alt="1-1"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.实践是使物质分化为自然界与人类社会的历史前提，又是使自然界与人类社会统一的现实基础。<br>
+2.自然界是人类社会的形成前提，人类社会也能影响与改变自然界，二者为生命共同体。<br>
+3.要合理地调节人与自然界的物质交换，树立生态文明理念，尊重自然规律，顺应自然和保护自然，这是人与自然和谐统一的关键。<br>
+结：推动实现碳达峰、碳中和目标，就是要调节人与自然物质交换，推动实现人与自然相统一。</p>
+</div></div>
+<h2 id="1-2">1-2</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F1-2.7e4uxg7uf0g0.png" alt="1-2"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.自然地理环境指的是人类社会所处地理位置相联系的自然条件的总和。<br>
+2.自然地理环境是人类社会生活生产的自然基础，提供了生活生产来源。<br>
+3.自然地理环境是人类社会生存和发展的必要条件，其优劣会促进或延缓人类社会的发展。<br>
+结：自然生态平衡对人类社会发展起重要作用，合理调节人与自然的物质交换，树立生态文明理念，保护自然环境与生物多样性，是实现人与自然和谐的关键。</p>
+</div></div>
+<h2 id="1-3">1-3</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F1-3_3-2.62l9c4nc0n80.png" alt="1-3"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.原理:<br>
+事物是普遍联系的。<br>
+联系的观点是唯物辩证法的总观点与总特征之一；<br>
+事物之间和内部要素之间相互制约、作用、影响。<br>
+2.性质：<br>
+联系具有多样性-物质世界是一个充满多样性的多姿多彩的世界，世界的物质统一性是多样性的统一。<br>
+联系具有条件性-人们要在尊重客观规律的前提下，发挥主观能动性，实践创造条件。<br>
+联系具有普遍性-万事万物都处在普遍联系中。<br>
+联系具有客观性-事物的联系是本身固有的，不是主观臆想的。<br>
+结：要用整体性与开放性的观念动态考察事物，保护生物多样性，才能达到人与自然的和谐。</p>
+</div></div>
+<hr>
+<h1>第二套</h1>
+<h2 id="2-1">2-1</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F2-1.2ajydwywvb0g.png" alt="2-1"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.人民群众作为历史的主体，创造了历史、物质财富与精神财富。<br>
+2.人民群众的总体意愿和行动，代表了历史的发展方向。<br>
+3.人民群众作为实践的主体，决定了历史发展的结局。<br>
+结：江山就是人民，人民就是江山，体现了以人民为中心的发展思想。<br>
+因此要保持群众观点：解放自己，为民服务，向民负责，虚心学习。<br>
+坚持走群众路线：相信群众，依靠群众，密切联系群众，全心全意为人民服务。</p>
+</div></div>
+<h2 id="2-2">2-2</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F2-2.45rly2hi3ea0.png" alt="2-2"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.定义：<br>
+历史思维能力是历史眼光与辩证思维的结合，是唯物史观的具体表现与实践运用，是以史为鉴、知古鉴今，用历史的眼光认识发展规律，把握前进方向，指导现实工作的能力。<br>
+2.关系：<br>
+历史是过去的现实，现实是未来的历史，历史、现实、未来是相通的。<br>
+3.效果：<br>
+历史方面：能理解和掌握历史知识，认识历史发展规律。<br>
+现实方面：可以对社会现实问题进行科学思考。<br>
+结：系统学习党史、新中国史、改革开放史、社会主义发展史，总结历史经验，坚定新时代中国特色社会主义不动摇，不断提高认识能力与实践水平。</p>
+</div></div>
+<h2 id="2-3">2-3</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F2-3.3u175yk39t60.png" alt="2-3"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.旗帜鲜明反对历史虚无主义，最根本是运用唯物史观及其方法论，做到具体问题具体分析，实事求是。<br>
+2.唯物史观主张：评价历史人物应坚持历史分析法与阶级分析法。<br>
+历史分析法：结合特定的历史背景与当时历史条件，对历史人物做具体且全面的考察与评价。<br>
+阶级分析法：将历史人物置于一定阶级中，联系所属阶级加以考察与评价。<br>
+结：这样才能正确运用历史观评价历史人物。</p>
+</div></div>
+<hr>
+<h1>第三套</h1>
+<h2 id="3-1">3-1</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F3-1_4-2.5biuy093ieg0.png" alt="3-1"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.原理：<br>
+实践决定认识，认识反复无限。<br>
+2.关系：<br>
+实践是认识的来源、目的、检验标准和动力。<br>
+认识指导实践。<br>
+3.反复性：认识是在实践的基础上，由感性认识飞跃到理性认识，再由理性认识飞跃到实践的过程。人类的认识过程是无穷的辩证发展过程。<br>
+4.无限性：客观实践与主观认识的统一是具体的、历史的。<br>
+结：人们对生态的认识来源于实践，也必须在实验中检验真理并进一步完善。</p>
+</div></div>
+<h2 id="3-2">3-2</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F1-3_3-2.62l9c4nc0n80.png" alt="3-2"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.原理:<br>
+事物是普遍联系的。<br>
+联系的观点是唯物辩证法的总观点与总特征之一；<br>
+事物之间和内部要素之间相互制约、作用、影响。<br>
+坚持系统思维，就是将事物放在普遍联系的系统中来把握，以寻求最优解。<br>
+2.性质：<br>
+联系具有多样性、条件性、普遍性、客观性。<br>
+坚持辩证思维，就是要从普遍联系的各个方面进行系统思考，全面而非片面、发展而非静止、客观而非主观地分析与处理问题。<br>
+结：用整体性与开放性的态度动态考察事物，坚持系统治理，保护生态环境。</p>
+</div></div>
+<h2 id="3-3">3-3</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F3-3.6e1tnax23740.png" alt="3-3"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.矛盾具有特殊性。<br>
+不同事物矛盾不同，各有特点；<br>
+同一事物不同阶段矛盾不同，各有特点；<br>
+矛盾的力量不平衡性，使不同方面的地位、性质、作用不同<br>
+2.具体问题具体分析，才能认清事物的本质与规律，进而对症下药，正确解决矛盾。<br>
+结：只有因地制宜、因形就势，才能找准最适合的绿色建筑模式。</p>
+</div></div>
+<hr>
+<h1>第四套</h1>
+<h2 id="4-2">4-2</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F3-1_4-2.5biuy093ieg0.png" alt="4-2"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.原理：<br>
+实践决定认识，认识反复无限。<br>
+2.关系：<br>
+实践是认识的来源，认识成果来源于实践，只有把握对象的本质规律，才能形成正确的认识。<br>
+实践是认识的目的，不在于认识事物本身，而在于更好地指导实践，改造世界。<br>
+实践是检验真理的唯一标准，认识的结果需要通过实践的检验。<br>
+实践是认识的动力，实践推动认识的产生与发展。<br>
+结：要掌握核心技术，就需要在实践中获得认识，并在实践中加以检验。</p>
+</div></div>
+<h2 id="4-1">4-1</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F4-1.73yrpw0hl4g0.png" alt="4-1"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.实践是发展的动力<br>
+2.实践不断为认识提出新课题，推动认识的发展；<br>
+实践为认识提供发展必要条件，为新课题累积丰富的感性材料，也为认识提供更完备的物质手段。<br>
+认识的能力在实践中锻炼与提高。<br>
+结：因此，应用需求是技术进步的主要推动力。</p>
+</div></div>
+<h2 id="4-3">4-3</h2>
+<p><img src="https://cdn.jsdelivr.net/gh/Ceazyer/image-cloud@master/image/%E9%A9%AC%E5%8E%9F4-3.7e7f3akhfno0.png" alt="4-3"></p>
+<div class="hide-toggle" ><div class="hide-button toggle-title" style=""><i class="fas fa-caret-right fa-fw"></i><span>简答参照</span></div>
+    <div class="hide-content"><p>1.原理：认识理性与非理性因素的协同作用。<br>
+非理性因素指认识主体的情感与意志，包括不自觉、非逻辑性特点的形式，如联系、想象、灵感。<br>
+具有激活、驱动、控制的作用。<br>
+结：注重非理性因素作用并充分发挥其积极作用…</p>
+</div></div>]]></content>
+      <tags>
+        <tag>考研政治</tag>
+      </tags>
+  </entry>
+</search>
